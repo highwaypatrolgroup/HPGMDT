@@ -110,7 +110,7 @@ async function resolveRole(u){
 
 function stopSync(){UNSUB.forEach(f=>{try{f()}catch{}});UNSUB=[];SH={};denied={}}
 function startSync(){
- stopSync();const cols=["records","violations","cfg","vehicles"];
+ stopSync();const cols=["records","violations","cfg","vehicles","citations","subjects","arrestlog"];
  return new Promise(res=>{let pend=cols.length,done=false;const one=()=>{if(!done&&--pend<=0){done=true;res()}};
   cols.forEach(n=>{let first=true;
    UNSUB.push(FS.collection(n).onSnapshot(snap=>{
@@ -165,12 +165,12 @@ async function signOut(){stopSync();S=null;P=null;try{await AUTH.signOut()}catch
 function main(){
  app(`<div class="bar"><img src="${LOGO}" alt=""><b>HPG · MDT</b><span><span class="dot ${online?"on":""}" id="dot"></span> <span id="clk"></span></span>
   <span class="sp"></span><span class="muted" id="who">${esc(P.rank)} · <b style="color:var(--tx)">${esc(P.rbx)}</b></span>${thmBtn()}<button class="btn g sm" id="out">SIGN OUT</button></div>
- <div class="tabs">${[["lic","LICENSE"],["veh","VEHICLE"],["tkt","TICKET"],["log","LOG"],["set","SETTINGS"]].map(t=>`<button data-t="${t[0]}" class="${tab===t[0]?"on":""}">${t[1]}</button>`).join("")}</div>
+ <div class="tabs">${[["lic","LICENSE"],["veh","VEHICLE"],["tkt","TICKET"],["cit","WARNING"],["wnt","WANTED"],["log","LOG"],["set","SETTINGS"]].map(t=>`<button data-t="${t[0]}" class="${tab===t[0]?"on":""}">${t[1]}</button>`).join("")}</div>
  <main id="v"></main>`);
  $("#thm").onclick=togTheme;$("#out").onclick=signOut;
  $$(".tabs button").forEach(b=>b.onclick=()=>{tab=b.dataset.t;main()});
  const tick=()=>{const c=$("#clk");if(c)c.textContent=new Date().toLocaleTimeString([],{hour12:false})};tick();clearInterval(window.__ck);window.__ck=setInterval(tick,1000);
- ({lic:licView,veh:vehView,tkt:tktView,log:logView,set:setView})[tab]()}
+ ({lic:licView,veh:vehView,tkt:tktView,cit:citView,wnt:wntView,log:logView,set:setView})[tab]()}
 let softT;function softRender(){clearTimeout(softT);softT=setTimeout(()=>{if(!S||!P)return;const d=$("#dot");if(d)d.classList.toggle("on",online);const a=document.activeElement;if(a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"))return;if(tab==="lic"||tab==="log")({lic:licView,log:logView})[tab]()},400)}
 const warn=k=>denied[k]?`<div class="alert wn">No permission to read “${k}”. Ask the administrator to allow personnel access in the Firestore rules.</div>`:"";
 
@@ -228,20 +228,21 @@ function tktView(){
  <div class="card"><h3>3 · DETAILS</h3><div class="row"><div><label class="l">VEHICLE TYPE</label><select id="vt">${VEH.map(x=>`<option>${x}</option>`).join("")}</select></div><div><label class="l">COLOR</label><input id="col" type="text"></div><div><label class="l">PLATE (OPTIONAL)</label><input id="pl" type="text" style="text-transform:uppercase"></div></div>
  <div class="row"><div><label class="l">DATE</label><input id="dt" type="date" value="${today()}"></div><div><label class="l">TIME</label><input id="tm" type="time" value="${String(n.getHours()).padStart(2,"0")+":"+String(n.getMinutes()).padStart(2,"0")}"></div></div>
  <label class="l">LOCATION</label><input id="lc" type="text">
- <label class="l">APPREHENDER NAME</label><input id="by" type="text" value="${esc(P.rbx)}" readonly><div class="muted" style="font-size:11px;margin-top:4px">${esc(P.rank)} · from your profile (change in Settings)</div>
+ <label class="l">APPREHENDING OFFICER</label><input id="by" type="text" value="${esc(P.rbx)}" readonly><div class="muted" style="font-size:11px;margin-top:4px">${esc(P.rank)} · from your profile (change in Settings)</div>
  <label class="l" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="imp" style="width:auto"> VEHICLE IMPOUNDED</label><label class="l">NOTES</label><textarea id="nt"></textarea>
- <div class="err" id="er"></div><button class="btn" id="sub" style="width:100%;padding:12px">ISSUE TICKET</button></div>`:""}`;
+ ${proofUI()}<div class="err" id="er"></div><button class="btn" id="sub" style="width:100%;padding:12px">ISSUE TICKET</button></div>`:""}`;
  if(!h){const res=()=>{const q=($("#q").value||"").trim().toLowerCase();if(q.length<2){$("#res").innerHTML="";return}
    const m=recs().filter(r=>String(r.licenseNo||"").toLowerCase().includes(q)||String(r.name||"").toLowerCase().includes(q)).slice(0,8);
    $("#res").innerHTML=m.map(r=>`<div class="item" data-ln="${esc(r.licenseNo)}"><span><b>${esc(r.licenseNo)}</b> · ${esc(r.name||"—")}</span></div>`).join("")||'<div class="muted" style="margin-top:8px">No match.</div>';
    $$("#res .item").forEach(i=>i.onclick=()=>{sel.tk=i.dataset.ln;tktView()})};$("#q").oninput=res;return}
- $("#chg").onclick=()=>{sel.tk=null;tktView()};
+ $("#chg").onclick=()=>{sel.tk=null;tktView()};const PR=proofWire();
  $$("#vl input").forEach(i=>i.onchange=()=>{const t=$$("#vl input:checked").reduce((a,c)=>a+VPTS[c.value],0);$("#tot").innerHTML=`<b>Total: ${t} demerit points</b>`});
  $("#sub").onclick=async()=>{
   const its=$$("#vl input:checked").map(i=>i.value),loc=$("#lc").value.trim(),er=m=>$("#er").textContent=m;
   if(!its.length)return er("Tick at least one violation.");if(!loc)return er("Enter the location.");
+  if(!PR.v)return er("Upload proof of the violation.");if(!PR.w)return er("Upload proof of the warning given to the violator.");
   const A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",used=new Set(viols().map(v=>v.tk));let tk;do{tk="CT-"+today().replace(/-/g,"")+"-"+Array.from({length:4},()=>A[Math.random()*A.length|0]).join("")}while(used.has(tk));
-  const id=Date.now(),v={id,tk,licenseNo:h.licenseNo,title:its.join(", "),points:its.reduce((a,t)=>a+VPTS[t],0),items:its.map(t=>({t,p:VPTS[t]})),vtype:$("#vt").value,color:$("#col").value.trim(),imp:$("#imp").checked,date:$("#dt").value||today(),time:$("#tm").value,loc,plate:$("#pl").value.trim().toUpperCase(),by:P.rbx,rank:P.rank,notes:$("#nt").value.trim()};
+  const id=Date.now(),v={id,tk,licenseNo:h.licenseNo,title:its.join(", "),points:its.reduce((a,t)=>a+VPTS[t],0),items:its.map(t=>({t,p:VPTS[t]})),vtype:$("#vt").value,color:$("#col").value.trim(),imp:$("#imp").checked,date:$("#dt").value||today(),time:$("#tm").value,loc,plate:$("#pl").value.trim().toUpperCase(),by:P.rbx,rank:P.rank,notes:$("#nt").value.trim(),pv:PR.v,pw:PR.w};
   const doc={k:"violations",n:"",j:JSON.stringify(v),e:String(h.email||"").toLowerCase()};
   $("#sub").disabled=true;
   try{await FS.doc("violations/"+id).set(doc);SH["violations/"+id]=doc;
@@ -253,8 +254,76 @@ function tktView(){
 function logView(){
  const mine=window.__mine,me=P.rbx.toLowerCase(),all=viols().sort((a,b)=>(b.id||0)-(a.id||0)),L=(mine?all.filter(v=>String(v.by||"").toLowerCase()===me):all).slice(0,60);
  $("#v").innerHTML=`${warn("violations")}<div class="card"><h3>RECENT TICKETS</h3><div class="row" style="margin-bottom:8px"><button class="btn ${mine?"g":""}" id="fa">ALL</button><button class="btn ${mine?"":"g"}" id="fm">MY TICKETS</button></div>
- ${L.length?`<table><tr><th>TICKET</th><th>LICENSE</th><th>VIOLATION</th><th>PTS</th></tr>${L.map(v=>{const h=holder(v.licenseNo);return`<tr><td>${esc(v.tk||v.id)}<br><span class="muted">${esc(v.date||"")} ${esc(v.time||"")}</span></td><td>${esc(v.licenseNo)}<br><span class="muted">${esc(h&&h.name||"")}</span></td><td>${esc(v.title||"")}<br><span class="muted">${esc(v.loc||"")} · ${esc(v.by||"")}</span></td><td>${pts(v)}</td></tr>`}).join("")}</table>`:'<div class="muted">No tickets.</div>'}</div>`;
- $("#fa").onclick=()=>{window.__mine=false;logView()};$("#fm").onclick=()=>{window.__mine=true;logView()}}
+ ${L.length?`<table><tr><th>TICKET</th><th>LICENSE</th><th>VIOLATION</th><th>PTS</th></tr>${L.map(v=>{const h=holder(v.licenseNo);return`<tr><td>${esc(v.tk||v.id)}<br><span class="muted">${esc(v.date||"")} ${esc(v.time||"")}</span></td><td>${esc(v.licenseNo)}<br><span class="muted">${esc(h&&h.name||"")}</span></td><td>${esc(v.title||"")}<br><span class="muted">${esc(v.loc||"")} · ${esc(v.by||"")}</span>${prf(v)}</td><td>${pts(v)}</td></tr>`}).join("")}</table>`:'<div class="muted">No tickets.</div>'}</div>`;
+ $("#v").insertAdjacentHTML("beforeend",arcCard());$("#fa").onclick=()=>{window.__mine=false;logView()};$("#fm").onclick=()=>{window.__mine=true;logView()}}
+
+/* ---- NON-VEHICLE WARNINGS / WANTED ---- */
+const OFF=["Jaywalking"],STS=["Arrested","Wanted","Active Warrant","Clear"];
+const lc=s=>String(s||"").trim().toLowerCase(),cits=()=>list("citations"),subs=()=>list("subjects"),subj=u=>subs().find(s=>s.u===lc(u));
+const warnsOf=u=>cits().filter(x=>x.u===lc(u)&&!x.arch).sort((a,b)=>b.id-a.id);
+const canMark=()=>S.role==="staff"||S.role==="admin";
+const scls=s=>s==="Arrested"?"ok":s==="Wanted"||s==="Active Warrant"?"er":s==="Clear"?"mu":"wn";
+async function putSub(s){const doc={k:"subjects",n:"",j:JSON.stringify(s),e:""};await FS.doc("subjects/"+s.u).set(doc);SH["subjects/"+s.u]=doc}
+async function setStatus(u,name,st,note,fin){const o=subj(u)||{u:lc(u),name,st:"Clear",hist:[]};o.name=o.name||name;o.st=st;o.hist=[...(o.hist||[]),{ts:new Date().toISOString(),st,by:S.email,rbx:P.rbx,note:note||""}];
+ if(fin&&(st==="Arrested"||st==="Clear"))return archive(o,note);await putSub(o)}
+async function archive(o,note){const ws=cits().filter(x=>x.u===o.u&&!x.arch),id=Date.now(),L={id,u:o.u,name:o.name,st:o.st,ts:new Date().toISOString(),by:S.email,rbx:P.rbx,note:note||"",cids:ws.map(x=>x.id),hist:o.hist},doc={k:"arrestlog",n:"",j:JSON.stringify(L),e:""};
+ await FS.doc("arrestlog/"+id).set(doc);SH["arrestlog/"+id]=doc;
+ for(const c of ws){c.arch=id;const d={k:"citations",n:"",j:JSON.stringify(c),e:""};await FS.doc("citations/"+c.id).set(d);SH["citations/"+c.id]=d}
+ if(SH["subjects/"+o.u]){await FS.doc("subjects/"+o.u).delete();delete SH["subjects/"+o.u]}}
+const arcCard=()=>{const L=list("arrestlog").sort((a,b)=>b.id-a.id).slice(0,60),cm={};cits().forEach(c=>cm[c.id]=c);
+ return `<div class="card"><h3>ARREST / CLEARANCE LOG · ${L.length}</h3>${L.length?`<table><tr><th>WHEN</th><th>PLAYER</th><th>OUTCOME</th></tr>${L.map(l=>`<tr><td>${esc((l.ts||"").slice(0,16).replace("T"," "))}</td><td>${esc(l.name)}</td><td><span class="pill ${scls(l.st)}">${esc(l.st)}</span><br><span class="muted">${esc(l.rbx||l.by||"")}${l.note?" · "+esc(l.note):""}</span>${(l.cids||[]).map(id=>cm[id]?`<div class="muted" style="margin-top:4px">${esc(cm[id].off)} · ${esc(cm[id].date||"")}</div>${prf(cm[id])}`:"").join("")}</td></tr>`).join("")}</table>`:'<div class="muted">No arrests or clearances logged yet.</div>'}</div>`};
+const shrink=f=>new Promise((ok,no)=>{const r=new FileReader();r.onerror=no;r.onload=()=>{const i=new Image();i.onerror=no;i.onload=()=>{const k=Math.min(1,900/Math.max(i.width,i.height)),c=document.createElement("canvas");c.width=Math.round(i.width*k);c.height=Math.round(i.height*k);c.getContext("2d").drawImage(i,0,0,c.width,c.height);ok(c.toDataURL("image/jpeg",.6))};i.src=r.result};r.readAsDataURL(f)});
+const proofUI=()=>`<label class="l">PROOF OF VIOLATION (REQUIRED)</label><input id="pv" type="file" accept="image/*" style="width:100%"><div id="pvp"></div><label class="l">PROOF OF WARNING GIVEN TO VIOLATOR (REQUIRED)</label><input id="pw2" type="file" accept="image/*" style="width:100%"><div id="pwp"></div>`;
+function proofWire(){const st={v:"",w:""};[["pv","pvp","v"],["pw2","pwp","w"]].forEach(([i,p,k])=>$("#"+i).onchange=async e=>{const f=e.target.files[0];st[k]="";$("#"+p).innerHTML="";if(!f)return;if(!/^image\//.test(f.type)){e.target.value="";return toast("Images only")}try{st[k]=await shrink(f);$("#"+p).innerHTML=`<img src="${st[k]}" alt="" style="max-width:120px;max-height:90px;margin-top:6px;border-radius:6px;border:1px solid var(--bd)">`}catch{toast("Couldn’t read that image")}});return st}
+const prf=x=>(x.pv||x.pw)?`<div style="margin-top:4px">${[["Proof of violation",x.pv],["Proof of warning given",x.pw]].map(([t,p])=>safeImg(p)?`<img class="pf" src="${safeImg(p)}" title="${t}" alt="${t}" style="width:44px;height:44px;object-fit:cover;border-radius:6px;border:1px solid var(--bd);margin-right:4px;cursor:pointer">`:"").join("")}</div>`:"";
+document.addEventListener("click",e=>{const t=e.target;if(t.classList&&t.classList.contains("pf")){const o=document.createElement("div");o.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;z-index:99";o.innerHTML=`<img src="${t.src}" alt="" style="max-width:96%;max-height:96%">`;o.onclick=()=>o.remove();document.body.appendChild(o)}});
+const wrow=x=>`<tr><td>${esc(x.date||"")} ${esc(x.time||"")}</td><td>${esc(x.name)}</td><td>${esc(x.off)}<br><span class="muted">${esc(x.loc||"")} · ${esc(x.by||"")}</span>${prf(x)}</td></tr>`;
+
+function citView(){
+ const L=cits().sort((a,b)=>b.id-a.id).slice(0,30);
+ $("#v").innerHTML=`${warn("citations")}<div class="card"><h3>ISSUE WARNING · NON-VEHICLE</h3><div class="muted" style="font-size:12px">Every citation is a warning. 3 warnings = automatic arrest.</div>
+ <label class="l">ROBLOX USERNAME</label><input id="cu" type="text" autocapitalize="off" autocomplete="off" maxlength="20"><div id="cw" class="muted" style="margin-top:6px"></div>
+ <div id="cx" style="display:none;margin-top:10px;padding:10px;border:1px dashed var(--tx);border-radius:8px"><b>3RD WARNING · WHAT HAPPENED? (REQUIRED)</b>
+  <label class="l" style="display:flex;gap:8px;align-items:center"><input type="radio" name="oc" value="arrested" style="width:auto"> ARRESTED BY ME</label>
+  <label class="l" style="display:flex;gap:8px;align-items:center"><input type="radio" name="oc" value="left" style="width:auto"> LEFT THE GAME</label></div>
+ <label class="l">OFFENSE</label><select id="co">${OFF.map(x=>`<option>${x}</option>`).join("")}</select>
+ <div class="row"><div><label class="l">DATE</label><input id="cd" type="date" value="${today()}"></div><div><label class="l">TIME</label><input id="ct" type="time" value="${new Date().toTimeString().slice(0,5)}"></div></div>
+ <label class="l">LOCATION</label><input id="cl" type="text"><label class="l">APPREHENDING OFFICER</label><input type="text" value="${esc(P.rbx)}" readonly><label class="l">NOTES</label><textarea id="cn"></textarea>
+ ${proofUI()}<div class="err" id="er"></div><button class="btn" id="cs" style="width:100%;padding:12px">ISSUE WARNING</button></div>
+ <div class="card"><h3>RECENT WARNINGS</h3>${L.length?`<table><tr><th>WHEN</th><th>PLAYER</th><th>OFFENSE</th></tr>${L.map(wrow).join("")}</table>`:'<div class="muted">None yet.</div>'}</div>`;
+ $("#cu").oninput=()=>{const u=$("#cu").value,s=subj(u);$("#cx").style.display=u.trim()&&warnsOf(u).length>=2&&(!s||s.st==="Clear")?"block":"none";$("#cw").innerHTML=u.trim()?`Current warnings: <b>${warnsOf(u).length}/3</b>${s&&s.st!=="Clear"?` · <span class="pill ${scls(s.st)}">${esc(s.st)}</span>`:""}`:""};
+ const PR=proofWire();
+ $("#cs").onclick=async()=>{const name=$("#cu").value.trim(),loc=$("#cl").value.trim(),er=m=>$("#er").textContent=m;
+  if(!/^[A-Za-z0-9_]{3,20}$/.test(name))return er("Enter a valid Roblox username.");if(!loc)return er("Enter the location.");
+  if(!PR.v)return er("Upload proof of the violation.");if(!PR.w)return er("Upload proof of the warning given to the violator.");
+  const s0=subj(name),third=warnsOf(name).length>=2&&(!s0||s0.st==="Clear"),oc=($("input[name=oc]:checked")||{}).value;
+  if(third&&!oc)return er("Tick whether the violator was arrested or left the game.");
+  const id=Date.now(),c={id,u:lc(name),name,off:$("#co").value,date:$("#cd").value||today(),time:$("#ct").value,loc,by:P.rbx,rank:P.rank,notes:$("#cn").value.trim(),pv:PR.v,pw:PR.w,out:third?oc:""},doc={k:"citations",n:"",j:JSON.stringify(c),e:""};
+  $("#cs").disabled=true;
+  try{await FS.doc("citations/"+id).set(doc);SH["citations/"+id]=doc;const n=warnsOf(name).length,s=subj(name);
+   if(n>=3&&(!s||s.st==="Clear")){if(oc==="arrested"){await setStatus(name,name,"Arrested","Arrested by "+P.rbx+" at 3rd warning",true);toast(name+" arrested: moved to log",4500)}else{await setStatus(name,name,"Wanted","Left the game at 3rd warning");toast(name+" left the game: marked WANTED",4500)}}
+   else toast("Warning "+n+"/3 issued to "+name,3000);citView()}
+  catch(e){console.error(e);$("#cs").disabled=false;er("Could not save. You may not have permission.")}}}
+
+function wntView(){
+ const flag=subs().filter(s=>s.st&&s.st!=="Clear").sort((a,b)=>STS.indexOf(a.st)-STS.indexOf(b.st)||0);
+ $("#v").innerHTML=`${warn("subjects")}<div class="card"><h3>SUBJECT LOOKUP</h3><input id="q" type="text" placeholder="Roblox username" autocomplete="off" autocapitalize="off"><div id="res"></div></div><div id="det"></div>
+ <div class="card"><h3>WANTED / ARRESTED BOARD · ${flag.length}</h3>${flag.map(s=>`<div class="item" data-u="${esc(s.u)}"><span><b>${esc(s.name)}</b></span><span class="pill ${scls(s.st)}">${esc(s.st)}</span></div>`).join("")||'<div class="muted">No flagged subjects.</div>'}</div>`;
+ const open=u=>{sel.sj=u;wntView()};
+ $$(".item[data-u]").forEach(i=>i.onclick=()=>open(i.dataset.u));
+ $("#q").oninput=()=>{const q=lc($("#q").value);if(q.length<2){$("#res").innerHTML="";return}
+  const names={};subs().concat(cits()).forEach(x=>{if(x.u.includes(q))names[x.u]=x.name});
+  if(/^[a-z0-9_]{3,20}$/.test(q)&&!names[q])names[q]=$("#q").value.trim();
+  $("#res").innerHTML=Object.keys(names).slice(0,8).map(u=>`<div class="item" data-u="${esc(u)}"><span><b>${esc(names[u])}</b></span><span class="muted">${warnsOf(u).length}/3</span></div>`).join("");
+  $$("#res .item").forEach(i=>i.onclick=()=>open(i.dataset.u))};
+ if(!sel.sj)return;
+ const u=sel.sj,s=subj(u),w=warnsOf(u),nm=(s&&s.name)||(w[0]&&w[0].name)||u,st=s?s.st:"Clear";
+ $("#det").innerHTML=`<div class="card"><h3>SUBJECT</h3>${st==="Wanted"||st==="Active Warrant"?`<div class="alert">${esc(st.toUpperCase())}</div>`:""}
+  <div class="kv"><span>Username</span><b>${esc(nm)}</b><span>Status</span><div><span class="pill ${scls(st)}">${esc(st)}</span></div><span>Warnings</span><b style="${w.length>=3?"color:var(--er)":""}">${w.length}/3</b></div>
+  ${w.length?`<table style="margin-top:10px"><tr><th>WHEN</th><th>PLAYER</th><th>OFFENSE</th></tr>${w.map(wrow).join("")}</table>`:""}
+  ${canMark()?`<label class="l">UPDATE STATUS (STAFF)</label><input id="sn" type="text" placeholder="Note, e.g. left the game / arrest confirmed"><div class="row" style="margin-top:8px">${STS.map(x=>`<button class="btn ${x===st?"":"g"}" data-st="${x}">${x.toUpperCase()}</button>`).join("")}</div><div class="muted" style="font-size:11px;margin-top:6px">Arrested or Clear removes the record from the board and moves it to the LOG tab.</div>`:'<div class="muted" style="margin-top:10px">Only staff can change status.</div>'}</div>
+  ${s&&s.hist&&s.hist.length?`<div class="card"><h3>STATUS HISTORY</h3><table><tr><th>WHEN</th><th>STATUS</th><th>BY</th></tr>${s.hist.slice().reverse().map(h=>`<tr><td>${esc((h.ts||"").slice(0,16).replace("T"," "))}</td><td>${esc(h.st)}</td><td>${esc(h.rbx||h.by||"")}<br><span class="muted">${esc(h.note||"")}</span></td></tr>`).join("")}</table></div>`:""}`;
+ $$("[data-st]").forEach(b=>b.onclick=async()=>{try{const st2=b.dataset.st;await setStatus(u,nm,st2,$("#sn").value.trim(),true);if(st2==="Arrested"||st2==="Clear")sel.sj=null;toast(nm+" → "+b.dataset.st);wntView()}catch(e){console.error(e);toast("Could not update status")}})}
 
 /* ---------- boot ---------- */
 (async function(){
