@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; style-src 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebaseapp.com; frame-src https://*.firebaseapp.com https://accounts.google.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TO · MDT</title>
+<style>
+:root{--bg:#04070d;--p1:#0a111d;--p2:#0f1a2b;--bd:#1d2e47;--tx:#d7e3f5;--mu:#7f93b2;--ac:#35d0ff;--ok:#3ddc97;--wn:#ffb84d;--er:#ff5d6c;color-scheme:dark}
+*{box-sizing:border-box}html,body{margin:0;height:100%;background:var(--bg);color:var(--tx);font:14px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+body{padding:env(safe-area-inset-top,0) env(safe-area-inset-right,0) env(safe-area-inset-bottom,0) env(safe-area-inset-left,0)}
+button,input,select,textarea{font:inherit;color:var(--tx)}
+#app{height:100%;display:flex;flex-direction:column}
+.bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 12px;background:var(--p1);border-bottom:1px solid var(--bd)}
+.bar b{color:var(--ac);letter-spacing:2px}.sp{flex:1}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--er);display:inline-block}.dot.on{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+.bar input,.bar select{background:var(--p2);border:1px solid var(--bd);border-radius:6px;padding:5px 8px}
+.bar input{width:170px}
+.tabs{display:flex;background:var(--p1);border-bottom:1px solid var(--bd)}
+.tabs button{flex:1;padding:11px 6px;background:none;border:0;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer;letter-spacing:1px}
+.tabs button.on{color:var(--ac);border-bottom-color:var(--ac);background:var(--p2)}
+main{flex:1;overflow:auto;padding:12px;max-width:980px;width:100%;margin:0 auto}
+.card{background:var(--p1);border:1px solid var(--bd);border-radius:10px;padding:12px;margin-bottom:12px}
+.card h3{margin:0 0 8px;font-size:12px;letter-spacing:2px;color:var(--mu);font-weight:600}
+.row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1;min-width:130px}
+input[type=text],input[type=email],input[type=password],input[type=date],input[type=time],select,textarea{width:100%;background:var(--p2);border:1px solid var(--bd);border-radius:8px;padding:9px 10px}
+textarea{min-height:64px;resize:vertical}
+label.l{display:block;margin:8px 0 3px;color:var(--mu);font-size:11px;letter-spacing:1px}
+.btn{background:var(--ac);color:#021018;border:0;border-radius:8px;padding:10px 16px;font-weight:700;cursor:pointer;letter-spacing:1px}
+.btn.g{background:var(--p2);color:var(--tx);border:1px solid var(--bd)}.btn:disabled{opacity:.5}
+.item{padding:9px 10px;border:1px solid var(--bd);border-radius:8px;margin-top:6px;background:var(--p2);cursor:pointer;display:flex;justify-content:space-between;gap:8px;align-items:center}
+.item:hover{border-color:var(--ac)}
+.pill{padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700;border:1px solid currentColor;white-space:nowrap}
+.pill.ok{color:var(--ok)}.pill.wn{color:var(--wn)}.pill.er{color:var(--er)}.pill.mu{color:var(--mu)}
+.alert{padding:10px 12px;border-radius:8px;margin:8px 0;border:1px solid var(--er);color:var(--er);background:rgba(255,93,108,.08);font-weight:700}
+.alert.wn{border-color:var(--wn);color:var(--wn);background:rgba(255,184,77,.08)}
+.kv{display:grid;grid-template-columns:140px 1fr;gap:4px 10px}.kv span{color:var(--mu)}
+.head{display:flex;gap:12px;align-items:flex-start}.head img{width:84px;height:84px;object-fit:cover;border-radius:8px;border:1px solid var(--bd)}
+table{width:100%;border-collapse:collapse}td,th{padding:6px 4px;border-bottom:1px solid var(--bd);text-align:left;vertical-align:top}th{color:var(--mu);font-size:11px;font-weight:600}
+.vl label{display:flex;justify-content:space-between;gap:8px;padding:8px 6px;border-bottom:1px solid var(--bd);cursor:pointer}
+.vl input{margin-right:8px}
+.muted{color:var(--mu)}.err{color:var(--er);min-height:20px;margin-top:8px}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--p2);border:1px solid var(--ac);padding:10px 16px;border-radius:8px;display:none;z-index:50;max-width:90vw}
+.login{margin:auto;width:min(380px,92vw)}.login h1{margin:0 0 4px;color:var(--ac);letter-spacing:3px;font-size:20px}
+</style>
+</head>
+<body>
+<div id="app"></div><div id="toast"></div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script>
+/* Same Firebase project as the Transportation Office web app. */
+const FIREBASE_CONFIG={apiKey:"AIzaSyA4JvPKCKm3OSnlVS0yJvmMcE1sWTQJOdU",authDomain:"transportation-office.firebaseapp.com",projectId:"transportation-office",storageBucket:"transportation-office.firebasestorage.app",messagingSenderId:"1012809948362",appId:"1:1012809948362:web:4a92b7372f4a62508be833"};
+const ADMIN_EMAIL="forzaconstantine@gmail.com";
+const VPTS={"Illegal parking":1,"No helmet":2,"Expired license":2,"Disregarding traffic signs":3,"Beating the red light":3,"Overloading":3,"Speeding":4,"Driving without license":5,"Reckless driving":6,"Driving under the influence":10,"Hit and run":12,"Driving without licensed companion":5,"Other":2};
+const VEH=["Car","Motorcycle","Truck","Bus","Van","Others"];
+const STATUSES=["10-8 AVAILABLE","10-6 BUSY","10-23 ON SCENE","10-7 OUT OF SERVICE"];
+
+const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const mem={};
+const lget=k=>{try{return localStorage.getItem(k)}catch{return mem[k]??null}};
+const lset=(k,v)=>{try{localStorage.setItem(k,v)}catch{mem[k]=v}};
+const mid=x=>String(x||"").trim().toLowerCase().replace(/\//g,"_");
+const norm=s=>String(s||"").trim().toUpperCase().replace(/\s+/g,"");
+const today=()=>new Date().toISOString().slice(0,10);
+const safeImg=u=>typeof u==="string"&&/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/=]+$/.test(u)?u:"";
+const pts=v=>+(v.points??VPTS[v.title]??2);
+let tt;const toast=(t,ms)=>{const e=$("#toast");e.textContent=t;e.style.display="block";clearTimeout(tt);tt=setTimeout(()=>e.style.display="none",ms||2800)};
+
+let FS,AUTH,SH={},UNSUB=[],S=null,tab="lic",online=false,sel={lic:null,veh:null},denied={};
+
+/* ---------- data ---------- */
+function list(k){const o=[];for(const p in SH){const s=SH[p];if(s.k!==k)continue;try{o.push(JSON.parse(s.j))}catch{}}return o}
+const recs=()=>list("records"),viols=()=>list("violations"),vehs=()=>list("vehicles");
+const holder=ln=>recs().find(r=>norm(r.licenseNo)===norm(ln));
+function effStatus(r){if(!r)return"Unknown";if(r.status==="Revoked"||r.status==="Suspended")return r.status;if(r.expiry&&new Date(r.expiry+"T23:59:59")<Date.now())return"Expired";return r.status||"Pending"}
+const cls=s=>s==="Active"?"ok":s==="Pending"?"wn":s==="Unknown"?"mu":"er";
+const pointsOf=ln=>viols().filter(v=>norm(v.licenseNo)===norm(ln)).reduce((a,v)=>a+pts(v),0);
+
+async function resolveRole(u){
+ const em=(u.email||"").toLowerCase();
+ if(em===ADMIN_EMAIL.toLowerCase())return{role:"admin",email:em};
+ if(!u.emailVerified)return{err:"Please verify your Gmail first, then sign in again."};
+ try{const sd=await FS.doc("staff/"+mid(em)).get();
+  if(sd.exists){let sc="";try{sc=JSON.parse(sd.data().j).s}catch{}return{role:sc==="viol"?"officer":"staff",email:em}}
+  return{err:"This account is not on the personnel list. Ask the administrator."}}
+ catch(e){console.error(e);return{err:"Couldn’t reach the database. Check your connection."}}}
+
+function stopSync(){UNSUB.forEach(f=>{try{f()}catch{}});UNSUB=[];SH={};denied={}}
+function startSync(){
+ stopSync();
+ const cols=["records","violations","cfg"];cols.push("vehicles");
+ return new Promise(res=>{let pend=cols.length,done=false;const one=()=>{if(!done&&--pend<=0){done=true;res()}};
+  cols.forEach(n=>{let first=true;
+   UNSUB.push(FS.collection(n).onSnapshot(snap=>{
+    snap.docChanges().forEach(ch=>{if(ch.type==="removed")delete SH[ch.doc.ref.path];else SH[ch.doc.ref.path]=ch.doc.data()});
+    online=true;if(first){first=false;one()}else softRender()},
+   err=>{console.error(n,err);denied[n]=true;if(first){first=false;one()}else softRender()}))});
+  setTimeout(()=>{if(!done){done=true;res()}},8000)})}
+
+/* ---------- views ---------- */
+function app(h){$("#app").innerHTML=h}
+function login(msg){
+ app(`<div class="login card" style="margin-top:12vh"><h1>TRANSPORTATION OFFICE</h1><div class="muted" style="margin-bottom:14px">MOBILE DATA TERMINAL · PERSONNEL ONLY</div>
+ <label class="l">GMAIL</label><input id="em" type="email" autocomplete="username" autocapitalize="off">
+ <label class="l">PASSWORD</label><input id="pw" type="password" autocomplete="current-password">
+ <div class="err" id="er">${esc(msg||"")}</div><button class="btn" id="go" style="width:100%">SIGN IN</button>
+ <div class="muted" style="margin-top:12px;font-size:12px">Use the same account as the main Transportation Office app. Access is limited to approved staff and violation officers.</div></div>`);
+ const run=async()=>{const em=$("#em").value.trim().toLowerCase(),pw=$("#pw").value,b=$("#go");
+  if(!em||!pw)return $("#er").textContent="Enter your Gmail and password.";
+  b.disabled=true;b.textContent="SIGNING IN…";
+  try{const c=await AUTH.signInWithEmailAndPassword(em,pw);const r=await resolveRole(c.user);
+   if(!r.role){await AUTH.signOut();b.disabled=false;b.textContent="SIGN IN";return $("#er").textContent=r.err}
+   S=r;await startSync();main()}
+  catch(e){b.disabled=false;b.textContent="SIGN IN";$("#er").textContent=({"auth/invalid-credential":"Wrong email or password.","auth/too-many-requests":"Too many attempts. Try again later.","auth/network-request-failed":"Network error."})[e&&e.code]||"Sign-in failed."}};
+ $("#go").onclick=run;$$("#em,#pw").forEach(i=>i.onkeydown=e=>{if(e.key==="Enter")run()})}
+
+function main(){
+ const cs=lget("mdt_rbx")||"",st=lget("mdt_st")||STATUSES[0];
+ app(`<div class="bar"><b>TO·MDT</b><span><span class="dot ${online?"on":""}" id="dot"></span> <span id="clk"></span></span>
+  <input id="cs" placeholder="Roblox username" value="${esc(cs)}" maxlength="20" autocapitalize="off" autocomplete="off" spellcheck="false"><select id="st">${STATUSES.map(x=>`<option${x===st?" selected":""}>${x}</option>`).join("")}</select>
+  <span class="sp"></span><span class="muted">${esc(S.email)} · ${esc(S.role.toUpperCase())}</span><button class="btn g" id="out">SIGN OUT</button></div>
+ <div class="tabs">${[["lic","LICENSE"],["veh","VEHICLE"],["tkt","TICKET"],["log","LOG"]].map(t=>`<button data-t="${t[0]}" class="${tab===t[0]?"on":""}">${t[1]}</button>`).join("")}</div>
+ <main id="v"></main>`);
+ $("#cs").oninput=e=>lset("mdt_rbx",e.target.value.trim());$("#st").onchange=e=>lset("mdt_st",e.target.value);
+ $("#out").onclick=async()=>{stopSync();S=null;try{await AUTH.signOut()}catch{}login()};
+ $$(".tabs button").forEach(b=>b.onclick=()=>{tab=b.dataset.t;main()});
+ const tick=()=>{const c=$("#clk");if(c)c.textContent=new Date().toLocaleTimeString([],{hour12:false})};tick();clearInterval(window.__ck);window.__ck=setInterval(tick,1000);
+ ({lic:licView,veh:vehView,tkt:tktView,log:logView})[tab]()}
+let softT;function softRender(){clearTimeout(softT);softT=setTimeout(()=>{if(!S)return;const d=$("#dot");if(d)d.classList.toggle("on",online);const a=document.activeElement;if(a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"))return;if(tab==="lic"||tab==="log")({lic:licView,log:logView})[tab]()},400)}
+const warn=k=>denied[k]?`<div class="alert wn">No permission to read “${k}”. Ask the administrator to allow personnel access in the Firestore rules.</div>`:"";
+
+/* ---- LICENSE ---- */
+function licView(){
+ const h=sel.lic?holder(sel.lic):null;
+ $("#v").innerHTML=`${warn("records")}<div class="card"><h3>LICENSE LOOKUP</h3><input id="q" type="text" placeholder="License no. or name" autocomplete="off" value="${esc(window.__ql||"")}"><div id="res"></div></div><div id="det"></div>`;
+ const res=()=>{const q=($("#q").value||"").trim().toLowerCase();window.__ql=$("#q").value;if(q.length<2){$("#res").innerHTML="";return}
+  const m=recs().filter(r=>String(r.licenseNo||"").toLowerCase().includes(q)||String(r.name||"").toLowerCase().includes(q)).slice(0,8);
+  $("#res").innerHTML=m.length?m.map(r=>`<div class="item" data-ln="${esc(r.licenseNo)}"><span><b>${esc(r.licenseNo)}</b> · ${esc(r.name||"—")}</span><span class="pill ${cls(effStatus(r))}">${esc(effStatus(r))}</span></div>`).join(""):'<div class="muted" style="margin-top:8px">No match.</div>';
+  $$("#res .item").forEach(i=>i.onclick=()=>{sel.lic=i.dataset.ln;licView()})};
+ $("#q").oninput=res;if(window.__ql)res();
+ if(!h)return;
+ const es=effStatus(h),vs=viols().filter(v=>norm(v.licenseNo)===norm(h.licenseNo)).sort((a,b)=>(b.id||0)-(a.id||0)),tp=pointsOf(h.licenseNo),ph=safeImg(h.photo);
+ $("#det").innerHTML=`<div class="card"><h3>RECORD</h3>
+  ${es==="Revoked"||es==="Suspended"?`<div class="alert">LICENSE ${esc(es.toUpperCase())}</div>`:es==="Expired"?'<div class="alert wn">LICENSE EXPIRED</div>':""}
+  <div class="head">${ph?`<img src="${ph}" alt="">`:""}<div class="kv" style="flex:1"><span>Name</span><b>${esc(h.name||"—")}</b><span>License no.</span><b>${esc(h.licenseNo)}</b>
+  <span>Type</span><div>${esc(h.type||"—")}</div><span>Age</span><div>${esc(h.age||"—")}</div><span>Restrictions</span><div>${esc((h.restr||[]).join(", ")||"None")}</div>
+  <span>Issued</span><div>${esc(h.issued||"—")}</div><span>Expiry</span><div>${esc(h.expiry||"—")}</div><span>Status</span><div><span class="pill ${cls(es)}">${esc(es)}</span></div>
+  <span>Demerit points</span><b style="color:${tp>=12?"var(--er)":tp>=6?"var(--wn)":"var(--ok)"}">${tp}</b></div></div>
+  <div style="margin-top:12px"><button class="btn" id="mk">WRITE TICKET</button></div></div>
+  <div class="card"><h3>VIOLATION HISTORY · ${vs.length}</h3>${vs.length?`<table><tr><th>TICKET</th><th>DATE</th><th>VIOLATION</th><th>PTS</th></tr>${vs.map(v=>`<tr><td>${esc(v.tk||v.id)}</td><td>${esc(v.date||"")}</td><td>${esc(v.title||"")}</td><td>${pts(v)}</td></tr>`).join("")}</table>`:'<div class="muted">Clean record.</div>'}</div>`;
+ $("#mk").onclick=()=>{sel.tk=h.licenseNo;tab="tkt";main()}}
+
+/* ---- VEHICLE ---- */
+function vehView(){
+ $("#v").innerHTML=`${warn("vehicles")}<div class="card"><h3>VEHICLE LOOKUP</h3><input id="q" type="text" placeholder="Plate / reg. no., owner, brand, model" autocomplete="off" value="${esc(window.__qv||"")}"><div id="res"></div></div><div id="det"></div>`;
+ const res=()=>{const q=($("#q").value||"").trim().toLowerCase();window.__qv=$("#q").value;if(q.length<2){$("#res").innerHTML="";return}
+  const m=vehs().filter(v=>[v.regNo,v.owner,v.brand,v.model,v.color].some(f=>String(f||"").toLowerCase().includes(q))).slice(0,8);
+  $("#res").innerHTML=m.length?m.map(v=>`<div class="item" data-id="${esc(v.id)}"><span><b>${esc(v.regNo||"UNREGISTERED")}</b> · ${esc((v.brand||"")+" "+(v.model||""))}</span><span class="muted">${esc(v.owner||"")}</span></div>`).join(""):'<div class="muted" style="margin-top:8px">No match.</div>';
+  $$("#res .item").forEach(i=>i.onclick=()=>{sel.veh=i.dataset.id;vehView()})};
+ $("#q").oninput=res;if(window.__qv)res();
+ const v=vehs().find(x=>String(x.id)===String(sel.veh));if(!v)return;const ph=safeImg(v.vph);
+ $("#det").innerHTML=`<div class="card"><h3>REGISTRATION</h3><div class="head">${ph?`<img src="${ph}" alt="">`:""}<div class="kv" style="flex:1">
+  <span>Reg. no.</span><b>${esc(v.regNo||"Not yet assigned")}</b><span>Owner</span><div>${esc(v.owner||"—")}</div><span>Vehicle</span><div>${esc((v.brand||"")+" "+(v.model||""))}</div>
+  <span>Color</span><div>${esc(v.color||"—")}</div><span>Class</span><div>${esc(v.vtype||"—")}${v.agency?" · "+esc(v.agency):""}</div>
+  <span>Status</span><div><span class="pill ${v.status==="Approved"||v.status==="Active"?"ok":v.status==="Pending"?"wn":"er"}">${esc(v.status||"—")}</span></div></div></div></div>`}
+
+/* ---- TICKET ---- */
+function tktView(){
+ const h=sel.tk?holder(sel.tk):null,by=lget("mdt_rbx")||lget("mdt_by")||"",n=new Date();
+ $("#v").innerHTML=`<div class="card"><h3>1 · LICENSE HOLDER</h3>${h?`<div class="item" style="cursor:default"><span><b>${esc(h.licenseNo)}</b> · ${esc(h.name||"—")}</span><span class="pill ${cls(effStatus(h))}">${esc(effStatus(h))}</span></div><button class="btn g" id="chg" style="margin-top:8px">CHANGE</button>`:`<input id="q" type="text" placeholder="License no. or name" autocomplete="off"><div id="res"></div>`}</div>
+ ${h?`<div class="card"><h3>2 · VIOLATIONS</h3><div class="vl" id="vl">${Object.keys(VPTS).map(k=>`<label><span><input type="checkbox" value="${esc(k)}">${esc(k)}</span><span class="muted">+${VPTS[k]}</span></label>`).join("")}</div><div id="tot" style="margin-top:8px"><b>Total: 0 demerit points</b></div></div>
+ <div class="card"><h3>3 · DETAILS</h3><div class="row"><div><label class="l">VEHICLE TYPE</label><select id="vt">${VEH.map(x=>`<option>${x}</option>`).join("")}</select></div><div><label class="l">COLOR</label><input id="col" type="text"></div><div><label class="l">PLATE (OPTIONAL)</label><input id="pl" type="text" style="text-transform:uppercase"></div></div>
+ <div class="row"><div><label class="l">DATE</label><input id="dt" type="date" value="${today()}"></div><div><label class="l">TIME</label><input id="tm" type="time" value="${String(n.getHours()).padStart(2,"0")+":"+String(n.getMinutes()).padStart(2,"0")}"></div></div>
+ <label class="l">LOCATION</label><input id="lc" type="text"><label class="l">ISSUING OFFICER</label><input id="by" type="text" value="${esc(by)}">
+ <label class="l" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="imp" style="width:auto"> VEHICLE IMPOUNDED</label><label class="l">NOTES</label><textarea id="nt"></textarea>
+ <div class="err" id="er"></div><button class="btn" id="sub" style="width:100%">ISSUE TICKET</button></div>`:""}`;
+ if(!h){const res=()=>{const q=($("#q").value||"").trim().toLowerCase();if(q.length<2){$("#res").innerHTML="";return}
+   const m=recs().filter(r=>String(r.licenseNo||"").toLowerCase().includes(q)||String(r.name||"").toLowerCase().includes(q)).slice(0,8);
+   $("#res").innerHTML=m.map(r=>`<div class="item" data-ln="${esc(r.licenseNo)}"><span><b>${esc(r.licenseNo)}</b> · ${esc(r.name||"—")}</span></div>`).join("")||'<div class="muted" style="margin-top:8px">No match.</div>';
+   $$("#res .item").forEach(i=>i.onclick=()=>{sel.tk=i.dataset.ln;tktView()})};$("#q").oninput=res;return}
+ $("#chg").onclick=()=>{sel.tk=null;tktView()};
+ $$("#vl input").forEach(i=>i.onchange=()=>{const t=$$("#vl input:checked").reduce((a,c)=>a+VPTS[c.value],0);$("#tot").innerHTML=`<b>Total: ${t} demerit points</b>`});
+ $("#sub").onclick=async()=>{
+  const its=$$("#vl input:checked").map(i=>i.value),loc=$("#lc").value.trim(),by2=$("#by").value.trim(),er=m=>$("#er").textContent=m;
+  if(!its.length)return er("Tick at least one violation.");if(!loc)return er("Enter the location.");if(!by2)return er("Enter the issuing officer name.");
+  const A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",used=new Set(viols().map(v=>v.tk));let tk;do{tk="CT-"+today().replace(/-/g,"")+"-"+Array.from({length:4},()=>A[Math.random()*A.length|0]).join("")}while(used.has(tk));
+  const id=Date.now(),v={id,tk,licenseNo:h.licenseNo,title:its.join(", "),points:its.reduce((a,t)=>a+VPTS[t],0),items:its.map(t=>({t,p:VPTS[t]})),vtype:$("#vt").value,color:$("#col").value.trim(),imp:$("#imp").checked,date:$("#dt").value||today(),time:$("#tm").value,loc,plate:$("#pl").value.trim().toUpperCase(),by:by2,notes:$("#nt").value.trim()};
+  $("#sub").disabled=true;
+  try{await FS.doc("violations/"+id).set({k:"violations",n:"",j:JSON.stringify(v),e:String(h.email||"").toLowerCase()});
+   lset("mdt_by",by2);SH["violations/"+id]={k:"violations",n:"",j:JSON.stringify(v),e:String(h.email||"").toLowerCase()};
+   try{const a={ts:new Date().toISOString(),by:S.email,role:S.role,action:"Created violation",target:v.title+" → "+v.licenseNo,info:"via MDT"};FS.collection("audit").add({k:"audit",n:"",j:JSON.stringify(a),e:"",ts:a.ts}).catch(()=>{})}catch{}
+   toast("Ticket "+tk+" issued (+"+v.points+" pts)",3500);sel.tk=null;tab="log";main()}
+  catch(e){console.error(e);$("#sub").disabled=false;er("Could not save. You may not have permission to write tickets.")}}}
+
+/* ---- LOG ---- */
+function logView(){
+ const mine=window.__mine,by=(lget("mdt_rbx")||lget("mdt_by")||"").toLowerCase(),all=viols().sort((a,b)=>(b.id||0)-(a.id||0)),L=(mine&&by?all.filter(v=>String(v.by||"").toLowerCase()===by):all).slice(0,60);
+ $("#v").innerHTML=`${warn("violations")}<div class="card"><h3>RECENT TICKETS</h3><div class="row" style="margin-bottom:8px"><button class="btn ${mine?"g":""}" id="fa">ALL</button><button class="btn ${mine?"":"g"}" id="fm">MY TICKETS</button></div>
+ ${L.length?`<table><tr><th>TICKET</th><th>LICENSE</th><th>VIOLATION</th><th>PTS</th></tr>${L.map(v=>{const h=holder(v.licenseNo);return`<tr><td>${esc(v.tk||v.id)}<br><span class="muted">${esc(v.date||"")} ${esc(v.time||"")}</span></td><td>${esc(v.licenseNo)}<br><span class="muted">${esc(h&&h.name||"")}</span></td><td>${esc(v.title||"")}<br><span class="muted">${esc(v.loc||"")} · ${esc(v.by||"")}</span></td><td>${pts(v)}</td></tr>`}).join("")}</table>`:'<div class="muted">No tickets.</div>'}</div>`;
+ $("#fa").onclick=()=>{window.__mine=false;logView()};$("#fm").onclick=()=>{window.__mine=true;logView()}}
+
+/* ---------- boot ---------- */
+(async function(){
+ if(!window.firebase){app('<div class="login card" style="margin-top:12vh">Couldn’t load Firebase. Check your connection.</div>');return}
+ try{firebase.initializeApp(FIREBASE_CONFIG);FS=firebase.firestore();AUTH=firebase.auth();try{await AUTH.setPersistence(firebase.auth.Auth.Persistence.SESSION)}catch{}
+  const u=await new Promise(r=>{const off=AUTH.onAuthStateChanged(x=>{off();r(x)})});
+  if(u){const r=await resolveRole(u);if(r.role){S=r;await startSync();return main()}await AUTH.signOut()}
+  login()}catch(e){console.error(e);login("Startup error. Reload the page.")}})();
+</script>
+</body>
+</html>
