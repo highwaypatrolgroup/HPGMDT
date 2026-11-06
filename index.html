@@ -40,6 +40,8 @@ table{width:100%;border-collapse:collapse}td,th{padding:6px 4px;border-bottom:1p
 .vl label{display:flex;justify-content:space-between;gap:8px;padding:8px 6px;border-bottom:1px solid var(--bd);cursor:pointer}.vl input{margin-right:8px;accent-color:var(--ac)}
 .muted{color:var(--mu)}.err{color:var(--er);min-height:20px;margin-top:8px}
 #toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ac);color:var(--on);padding:10px 16px;border-radius:8px;display:none;z-index:50;max-width:90vw;font-weight:700}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:12px}.stat{background:var(--p1);border:1px solid var(--bd);border-radius:10px;padding:12px}.stat b{display:block;font-size:24px;margin-top:2px}.stat span{color:var(--mu);font-size:10px;letter-spacing:1px}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:0 12px;align-items:start}.meter{height:6px;background:var(--ac);border-radius:3px;margin-top:4px}.ago{font-variant-numeric:tabular-nums}.live{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ac);box-shadow:0 0 6px var(--ac);margin-right:6px}
 /* login / onboarding */
 .stage{flex:1;display:flex;align-items:center;justify-content:center;padding:20px;background:radial-gradient(1000px 520px at 50% -10%,var(--bg2),var(--bg));position:relative;overflow:auto}
 .stage .tg{position:absolute;top:calc(12px + env(safe-area-inset-top,0px));right:12px}
@@ -88,7 +90,7 @@ applyTheme(lget("mdt_theme")==="light"?"light":"dark");
 const togTheme=()=>{applyTheme(curTheme()==="dark"?"light":"dark");const b=$("#thm");if(b)b.textContent=curTheme()==="dark"?"☀ Light":"☾ Dark"};
 const thmBtn=cls=>`<button class="btn g sm ${cls||""}" id="thm" type="button">${curTheme()==="dark"?"☀ Light":"☾ Dark"}</button>`;
 
-let FS,AUTH,SH={},UNSUB=[],S=null,P=null,tab="lic",online=false,sel={lic:null,veh:null,tk:null},denied={};
+let FS,AUTH,SH={},UNSUB=[],S=null,P=null,tab="dash",online=false,sel={lic:null,veh:null,tk:null},denied={};
 const profKey=e=>"mdt_prof:"+mid(e);
 const loadProf=e=>{try{const p=JSON.parse(lget(profKey(e)));return p&&p.rbx&&p.rank?p:null}catch{return null}};
 const saveProf=(e,p)=>lset(profKey(e),JSON.stringify(p));
@@ -165,21 +167,22 @@ function onboard(){
  <div class="foot"><a id="so" style="cursor:pointer;text-decoration:underline">Sign out</a></div></div></div>`);
  $("#thm").onclick=togTheme;
  $("#so").onclick=()=>signOut();
- const run=()=>{const rbx=$("#ru").value.trim(),rank=$("#rk0").value.trim(),m=checkProf(rbx,rank);if(m)return $("#er").textContent=m;P={rbx,rank};saveProf(S.email,P);tab="lic";main()};
+ const run=()=>{const rbx=$("#ru").value.trim(),rank=$("#rk0").value.trim(),m=checkProf(rbx,rank);if(m)return $("#er").textContent=m;P={rbx,rank};saveProf(S.email,P);tab="dash";main()};
  $("#go").onclick=run;$$("#ru,#rk0").forEach(i=>i.onkeydown=e=>{if(e.key==="Enter")run()})}
 
-async function signOut(){stopSync();S=null;P=null;try{await AUTH.signOut()}catch{}login()}
+async function signOut(){stopPresence();stopSync();S=null;P=null;try{await AUTH.signOut()}catch{}login()}
 
 function main(){
  app(`<div class="bar"><img src="${LOGO}" alt=""><b>HPG · MDT</b><span><span class="dot ${online?"on":""}" id="dot"></span> <span id="clk"></span></span>
   <span class="sp"></span><span class="muted" id="who">${esc(P.rank)} · <b style="color:var(--tx)">${esc(P.rbx)}</b></span>${thmBtn()}<button class="btn g sm" id="out">SIGN OUT</button></div>
- <div class="tabs">${[["lic","LICENSE"],["veh","VEHICLE"],["tkt","TICKET"],["cit","WARNING"],["wnt","WANTED"],["log","LOG"],["set","SETTINGS"]].map(t=>`<button data-t="${t[0]}" class="${tab===t[0]?"on":""}">${t[1]}</button>`).join("")}</div>
+ <div class="tabs">${[["dash","DASHBOARD"],["lic","LICENSE"],["veh","VEHICLE"],["tkt","TICKET"],["cit","WARNING"],["wnt","WANTED"],["log","LOG"],["set","SETTINGS"]].map(t=>`<button data-t="${t[0]}" class="${tab===t[0]?"on":""}">${t[1]}</button>`).join("")}</div>
  <main id="v"></main>`);
  $("#thm").onclick=togTheme;$("#out").onclick=signOut;
  $$(".tabs button").forEach(b=>b.onclick=()=>{tab=b.dataset.t;main()});
  const tick=()=>{const c=$("#clk");if(c)c.textContent=new Date().toLocaleTimeString([],{hour12:false})};tick();clearInterval(window.__ck);window.__ck=setInterval(tick,1000);
- ({lic:licView,veh:vehView,tkt:tktView,cit:citView,wnt:wntView,log:logView,set:setView})[tab]()}
-let softT;function softRender(){clearTimeout(softT);softT=setTimeout(()=>{if(!S||!P)return;const d=$("#dot");if(d)d.classList.toggle("on",online);if(tab==="cit"){const r=$("#rw");if(r)r.innerHTML=recentW();const u=$("#cu");if(u&&u.value&&u.oninput)u.oninput();return}
+ startPresence();({dash:dashView,lic:licView,veh:vehView,tkt:tktView,cit:citView,wnt:wntView,log:logView,set:setView})[tab]()}
+let softT;function softRender(){clearTimeout(softT);softT=setTimeout(()=>{if(!S||!P)return;const d=$("#dot");if(d)d.classList.toggle("on",online);if(tab==="dash"){dashView();return}
+  if(tab==="cit"){const r=$("#rw");if(r)r.innerHTML=recentW();const u=$("#cu");if(u&&u.value&&u.oninput)u.oninput();return}
   const a=document.activeElement;if(a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"||a.tagName==="SELECT"))return;
   if(tab==="wnt"){if($("#sn")&&$("#sn").value)return;wntView();return}
   if(tab==="lic"||tab==="log"||tab==="veh")({lic:licView,log:logView,veh:vehView})[tab]()},400)}
@@ -241,19 +244,18 @@ function tktView(){
  <label class="l">LOCATION</label><input id="lc" type="text">
  <label class="l">APPREHENDING OFFICER</label><input id="by" type="text" value="${esc(P.rbx)}" readonly><div class="muted" style="font-size:11px;margin-top:4px">${esc(P.rank)} · from your profile (change in Settings)</div>
  <label class="l" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="imp" style="width:auto"> VEHICLE IMPOUNDED</label><label class="l">NOTES</label><textarea id="nt"></textarea>
- ${proofUI()}<div class="err" id="er"></div><button class="btn" id="sub" style="width:100%;padding:12px">ISSUE TICKET</button></div>`:""}`;
+ <div class="err" id="er"></div><button class="btn" id="sub" style="width:100%;padding:12px">ISSUE TICKET</button></div>`:""}`;
  if(!h){const res=()=>{const q=($("#q").value||"").trim().toLowerCase();if(q.length<2){$("#res").innerHTML="";return}
    const m=recs().filter(r=>String(r.licenseNo||"").toLowerCase().includes(q)||String(r.name||"").toLowerCase().includes(q)).slice(0,8);
    $("#res").innerHTML=m.map(r=>`<div class="item" data-ln="${esc(r.licenseNo)}"><span><b>${esc(r.licenseNo)}</b> · ${esc(r.name||"—")}</span></div>`).join("")||'<div class="muted" style="margin-top:8px">No match.</div>';
    $$("#res .item").forEach(i=>i.onclick=()=>{sel.tk=i.dataset.ln;tktView()})};$("#q").oninput=res;return}
- $("#chg").onclick=()=>{sel.tk=null;tktView()};const PR=proofWire();
+ $("#chg").onclick=()=>{sel.tk=null;tktView()};
  $$("#vl input").forEach(i=>i.onchange=()=>{const t=$$("#vl input:checked").reduce((a,c)=>a+VPTS[c.value],0);$("#tot").innerHTML=`<b>Total: ${t} demerit points</b>`});
  $("#sub").onclick=async()=>{
   const its=$$("#vl input:checked").map(i=>i.value),loc=$("#lc").value.trim(),er=m=>$("#er").textContent=m;
   if(!its.length)return er("Tick at least one violation.");if(!loc)return er("Enter the location.");
-  if(!PR.v)return er("Upload proof of the violation.");if(!PR.w)return er("Upload proof of the warning given to the violator.");
   const A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",used=new Set(viols().map(v=>v.tk));let tk;do{tk="CT-"+today().replace(/-/g,"")+"-"+Array.from({length:4},()=>A[Math.random()*A.length|0]).join("")}while(used.has(tk));
-  const id=Date.now(),v={id,tk,licenseNo:h.licenseNo,title:its.join(", "),points:its.reduce((a,t)=>a+VPTS[t],0),items:its.map(t=>({t,p:VPTS[t]})),vtype:$("#vt").value,color:$("#col").value.trim(),imp:$("#imp").checked,date:$("#dt").value||today(),time:$("#tm").value,loc,plate:$("#pl").value.trim().toUpperCase(),by:P.rbx,rank:P.rank,notes:$("#nt").value.trim(),pv:PR.v,pw:PR.w};
+  const id=Date.now(),v={id,tk,licenseNo:h.licenseNo,title:its.join(", "),points:its.reduce((a,t)=>a+VPTS[t],0),items:its.map(t=>({t,p:VPTS[t]})),vtype:$("#vt").value,color:$("#col").value.trim(),imp:$("#imp").checked,date:$("#dt").value||today(),time:$("#tm").value,loc,plate:$("#pl").value.trim().toUpperCase(),by:P.rbx,rank:P.rank,notes:$("#nt").value.trim()};
   const doc={k:"violations",n:"",j:JSON.stringify(v),e:String(h.email||"").toLowerCase()};
   $("#sub").disabled=true;
   try{await FS.doc("violations/"+id).set(doc);SH["violations/"+id]=doc;
@@ -337,6 +339,46 @@ function wntView(){
   ${canMark()?`<label class="l">UPDATE STATUS (STAFF)</label><input id="sn" type="text" placeholder="Note, e.g. left the game / arrest confirmed"><div class="row" style="margin-top:8px">${STS.map(x=>`<button class="btn ${x===st?"":"g"}" data-st="${x}">${x.toUpperCase()}</button>`).join("")}</div><div class="muted" style="font-size:11px;margin-top:6px">Arrested or Clear removes the record from the board and moves it to the LOG tab.</div>`:'<div class="muted" style="margin-top:10px">Only staff can change status.</div>'}</div>
   ${s&&s.hist&&s.hist.length?`<div class="card"><h3>STATUS HISTORY</h3><table><tr><th>WHEN</th><th>STATUS</th><th>BY</th></tr>${s.hist.slice().reverse().map(h=>`<tr><td>${esc((h.ts||"").slice(0,16).replace("T"," "))}</td><td>${esc(h.st)}</td><td>${esc(h.rbx||h.by||"")}<br><span class="muted">${esc(h.note||"")}</span></td></tr>`).join("")}</table></div>`:""}`;
  $$("[data-st]").forEach(b=>b.onclick=async()=>{try{const st2=b.dataset.st;await setStatus(u,nm,st2,$("#sn").value.trim(),true);if(st2==="Arrested"||st2==="Clear")sel.sj=null;toast(nm+" → "+b.dataset.st);wntView()}catch(e){console.error(e);toast("Could not update status")}})}
+
+/* ---- DASHBOARD ---- */
+let sess=0,pTimer=0;const pid=()=>"violations/pr_"+mid(S.email);
+async function beat(out){try{const o={email:S.email,rbx:P.rbx,rank:P.rank,since:sess,seen:out?0:Date.now()},doc={k:"presence",n:"",j:JSON.stringify(o),e:""};await FS.doc(pid()).set(doc);SH[pid()]=doc;window.__pden=0}catch(e){window.__pden=1;console.error(e)}}
+function startPresence(){if(pTimer||!S||!P)return;sess=Date.now();beat();pTimer=setInterval(()=>beat(),45000);window.addEventListener("pagehide",()=>{if(S&&P)beat(true)})}
+function stopPresence(){clearInterval(pTimer);pTimer=0;if(S&&P)beat(true)}
+const fmtD=ms=>{const s=Math.floor(Math.max(0,ms)/1000),h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return(h?h+"h ":"")+(h||m?String(m).padStart(h?2:1,"0")+"m ":"")+String(x).padStart(h||m?2:1,"0")+"s"};
+const ago=t=>`<span class="ago" data-t="${t}">${fmtD(Date.now()-t)}</span>`;
+const tickAgo=()=>$$(".ago").forEach(e=>e.textContent=fmtD(Date.now()-(+e.dataset.t)));
+let tk=0;setInterval(()=>{tickAgo();if(S&&P&&tab==="dash"&&++tk%30===0)dashView()},1000);
+const feed=()=>{const F=[];
+ viols().forEach(v=>F.push({t:v.id,g:"TICKET",m:(v.title||"")+" → "+v.licenseNo,by:v.by}));
+ cits().forEach(c=>F.push({t:c.id,g:"WARNING",m:c.name+" · "+c.off,by:c.by}));
+ list("subjects").forEach(e=>F.push({t:e.id,g:String(e.st).toUpperCase(),m:e.name+(e.note?" · "+e.note:""),by:e.rbx}));
+ list("arrestlog").forEach(l=>F.push({t:l.id,g:String(l.st).toUpperCase(),m:l.name+" · moved to log",by:l.rbx}));
+ return F.filter(x=>x.t>1e12).sort((a,b)=>b.t-a.t)};
+function dashView(){
+ const now=Date.now(),t0=new Date();t0.setHours(0,0,0,0);const T=+t0,vs=viols(),cs=cits(),me=P.rbx.toLowerCase(),isMe=x=>String(x||"").toLowerCase()===me;
+ const on=list("presence").filter(p=>p.email!==S.email&&p.seen>now-12e4).concat([{email:S.email,rbx:P.rbx,rank:P.rank,since:sess||now}]).sort((a,b)=>a.since-b.since);
+ const A=[];
+ subs().filter(x=>x.st==="Wanted"||x.st==="Active Warrant").forEach(x=>{const e=x.hist[x.hist.length-1];A.push({c:"er",tag:x.st.toUpperCase(),t:x.name,s:e.note||"Flagged by "+(e.rbx||"staff"),at:Date.parse(e.ts)||0})});
+ const nm={};cs.forEach(c=>nm[c.u]=c.name);
+ Object.keys(nm).forEach(u=>{const w=warnsOf(u),x=subj(u);if(w.length>=2&&!(x&&x.st!=="Clear"))A.push({c:"wn",tag:w.length+"/3",t:nm[u],s:w.length>=3?"3 warnings, no action logged":"1 warning from arrest",at:w[0].id})});
+ recs().forEach(r=>{const p=pointsOf(r.licenseNo);if(p>=12){const l=vs.filter(v=>norm(v.licenseNo)===norm(r.licenseNo)).sort((a,b)=>b.id-a.id)[0];A.push({c:"wn",tag:p+" PTS",t:r.name||r.licenseNo,s:"License "+r.licenseNo+" · high demerit points",at:l?l.id:0})}});
+ A.sort((a,b)=>(a.c==="er"?0:1)-(b.c==="er"?0:1)||a.at-b.at);
+ const tv={};vs.forEach(v=>String(v.title||"").split(", ").forEach(x=>{if(x)tv[x]=(tv[x]||0)+1}));cs.forEach(c=>tv[c.off]=(tv[c.off]||0)+1);
+ const top=Object.entries(tv).sort((a,b)=>b[1]-a[1]).slice(0,5),mx=top[0]?top[0][1]:1;
+ const ls={};recs().forEach(r=>{const k=effStatus(r);ls[k]=(ls[k]||0)+1});
+ const ob={};vs.concat(cs).forEach(x=>{if(x.id>=T&&x.by)ob[x.by]=(ob[x.by]||0)+1});const ol=Object.entries(ob).sort((a,b)=>b[1]-a[1]).slice(0,5);
+ const mine=vs.filter(v=>v.id>=T&&isMe(v.by)).length+cs.filter(c=>c.id>=T&&isMe(c.by)).length;
+ const stats=[["ON DUTY",on.length],["MY SHIFT",ago(sess||now)],["TICKETS TODAY",vs.filter(v=>v.id>=T).length],["WARNINGS TODAY",cs.filter(c=>c.id>=T).length],["MY ISSUED TODAY",mine],["WANTED / WARRANTS",A.filter(a=>a.c==="er").length],["LICENSES",recs().length],["VEHICLES",vehs().length]];
+ const none=t=>`<div class="muted">${t}</div>`;
+ $("#v").innerHTML=`${warn("violations")}<div class="muted" style="margin-bottom:10px">${esc(new Date().toLocaleDateString([],{weekday:"long",year:"numeric",month:"long",day:"numeric"}))} · ${esc(P.rank)} <b style="color:var(--tx)">${esc(P.rbx)}</b></div>
+ <div class="grid">${stats.map(x=>`<div class="stat"><span>${x[0]}</span><b>${x[1]}</b></div>`).join("")}</div>
+ <div class="two"><div class="card"><h3>ACTIVE PERSONNEL · ${on.length}</h3>${on.map(p=>`<div class="item" style="cursor:default"><span><span class="live"></span><b>${esc(p.rbx)}</b>${p.email===S.email?' <span class="muted">(you)</span>':""}<br><span class="muted">${esc(p.rank||"")}</span></span><span style="text-align:right" class="muted">on duty<br><b style="color:var(--tx)">${ago(p.since)}</b></span></div>`).join("")}${window.__pden?'<div class="muted" style="margin-top:8px;font-size:11px">Presence could not be saved to the database, so other officers may not see you. Check Firestore write access.</div>':""}</div>
+ <div class="card"><h3>ALERTS · ${A.length}</h3>${A.length?A.map(a=>`<div class="item" style="cursor:default"><span><b>${esc(a.t)}</b><br><span class="muted">${esc(a.s)}</span></span><span style="text-align:right"><span class="pill ${a.c}">${esc(a.tag)}</span><br>${a.at?ago(a.at):""}</span></div>`).join(""):none("No active alerts.")}</div></div>
+ <div class="two"><div class="card"><h3>RECENT ACTIVITY</h3>${feed().slice(0,12).map(f=>`<div class="item" style="cursor:default"><span><span class="pill mu">${esc(f.g)}</span> ${esc(f.m)}<br><span class="muted">${esc(f.by||"")}</span></span><span class="muted" style="white-space:nowrap">${ago(f.t)} ago</span></div>`).join("")||none("No activity yet.")}</div>
+ <div><div class="card"><h3>TOP VIOLATIONS</h3>${top.map(x=>`<div style="margin-top:8px"><div style="display:flex;justify-content:space-between"><span>${esc(x[0])}</span><b>${x[1]}</b></div><div class="meter" style="width:${Math.max(4,x[1]/mx*100)}%"></div></div>`).join("")||none("No data.")}</div>
+ <div class="card"><h3>OFFICERS · TODAY</h3>${ol.map(x=>`<div style="display:flex;justify-content:space-between;margin-top:6px"><span>${esc(x[0])}</span><b>${x[1]}</b></div>`).join("")||none("Nothing issued today.")}</div>
+ <div class="card"><h3>LICENSE STATUS</h3>${Object.keys(ls).map(k=>`<div style="display:flex;justify-content:space-between;margin-top:6px"><span class="pill ${cls(k)}">${esc(k)}</span><b>${ls[k]}</b></div>`).join("")||none("No licenses.")}</div></div></div>`}
 
 /* ---------- boot ---------- */
 (async function(){
